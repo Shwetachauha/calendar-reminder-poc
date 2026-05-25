@@ -8,6 +8,7 @@ export interface ProviderIntegration {
   authMode: "dummy" | "oauth";
   accountId: string | null;
   accountEmail: string | null;
+  accessToken: string | null;
   tokenPreview: string | null;
   connectedAt: string | null;
   lastSyncedAt: string | null;

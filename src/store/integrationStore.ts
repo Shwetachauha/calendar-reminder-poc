@@ -14,7 +14,12 @@ interface IntegrationState {
   connectProviderWithAccount: (
     provider: CalendarProvider,
     accountId: string,
-    options?: { accountEmail?: string; tokenPreview?: string; authMode?: "dummy" | "oauth" },
+    options?: {
+      accountEmail?: string;
+      accessToken?: string;
+      tokenPreview?: string;
+      authMode?: "dummy" | "oauth";
+    },
   ) => void;
   disconnectProvider: (provider: CalendarProvider) => void;
   isProviderConnected: (provider: CalendarProvider) => boolean;
@@ -38,6 +43,7 @@ const defaultProviderState = (provider: CalendarProvider): ProviderIntegration =
   authMode: "dummy",
   accountId: null,
   accountEmail: null,
+  accessToken: null,
   tokenPreview: null,
   connectedAt: null,
   lastSyncedAt: null,
@@ -68,6 +74,7 @@ export const useIntegrationStore = create<IntegrationState>()(
         const now = dayjs().toISOString();
         const authMode = options?.authMode ?? "oauth";
         const accountEmail = options?.accountEmail ?? null;
+        const accessToken = options?.accessToken ?? null;
         const tokenPreview = options?.tokenPreview ?? null;
 
         set((state) => ({
@@ -79,6 +86,7 @@ export const useIntegrationStore = create<IntegrationState>()(
               authMode,
               accountId,
               accountEmail,
+              accessToken,
               tokenPreview,
               connectedAt: now,
               lastSyncStatus: "idle",

@@ -38,7 +38,8 @@ export const useEventStore = create<EventState>((set, get) => ({
     }
   },
   createEvent: async (payload, token) => {
-    const { isProviderConnected, markSyncError, markSyncSuccess } = useIntegrationStore.getState();
+    const { isProviderConnected, markSyncError, markSyncSuccess, providers } =
+      useIntegrationStore.getState();
     if (!isProviderConnected(payload.provider)) {
       const providerLabel = payload.provider === "google" ? "Google" : "Outlook";
       const message = `${providerLabel} account is not connected`;
@@ -51,7 +52,12 @@ export const useEventStore = create<EventState>((set, get) => ({
       const created = await createEventApi(payload, token);
 
       if (created.provider === "google") {
-        await syncGoogleCalendar(created.id, token);
+        const googleAccessToken = providers.google.accessToken;
+        if (!googleAccessToken) {
+          throw new Error("Google account is connected, but OAuth token is missing. Reconnect Google in Settings.");
+        }
+
+        await syncGoogleCalendar(created, googleAccessToken);
       } else {
         await syncOutlookCalendar(created.id, token);
       }

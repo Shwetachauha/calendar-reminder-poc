@@ -77,6 +77,7 @@ export default function SettingsPage() {
           connectProviderWithAccount("google", accountId, {
             authMode: "oauth",
             accountEmail: profile.email,
+            accessToken: response.access_token,
             tokenPreview: `${response.access_token.slice(0, 8)}...`,
           });
           toast.success(`Google connected as ${profile.email ?? accountId}`);
@@ -123,6 +124,8 @@ export default function SettingsPage() {
       <Stack spacing={2} className="!mt-4">
         {(Object.keys(providerLabels) as CalendarProvider[]).map((provider) => {
           const state = providers[provider];
+          const needsGoogleReconnect =
+            provider === "google" && (state.authMode !== "oauth" || !state.accessToken);
 
           return (
             <Paper
@@ -158,6 +161,9 @@ export default function SettingsPage() {
                     Account email: {state.accountEmail ?? "-"}
                   </Typography>
                   <Typography variant="caption" className="!block !text-slate-600">
+                    Access token: {state.accessToken ? "stored" : "-"}
+                  </Typography>
+                  <Typography variant="caption" className="!block !text-slate-600">
                     Token preview: {state.tokenPreview ?? "-"}
                   </Typography>
                   <Typography variant="caption" className="!block !text-slate-600">
@@ -166,6 +172,11 @@ export default function SettingsPage() {
                   <Typography variant="caption" className="!block !text-slate-600">
                     Last synced at: {formatDateTime(state.lastSyncedAt)}
                   </Typography>
+                  {needsGoogleReconnect ? (
+                    <Typography variant="caption" className="!mt-1 !block !text-amber-700">
+                      Google OAuth token missing. Reconnect to enable real calendar sync.
+                    </Typography>
+                  ) : null}
                   {state.lastError ? (
                     <Typography variant="caption" className="!mt-1 !block !text-rose-600">
                       Last error: {state.lastError}
@@ -175,14 +186,14 @@ export default function SettingsPage() {
 
                 {state.connected ? (
                   <Box className="flex items-center gap-2">
-                    {provider === "google" && state.authMode !== "oauth" ? (
+                    {needsGoogleReconnect ? (
                       <Button
                         variant="contained"
                         startIcon={<LinkRoundedIcon />}
                         disabled={!googleReady}
                         onClick={() => handleConnect(provider)}
                       >
-                        Reconnect with Google OAuth
+                        Reconnect Google OAuth
                       </Button>
                     ) : null}
 
