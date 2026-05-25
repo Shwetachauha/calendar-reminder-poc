@@ -1,36 +1,98 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Calendar Reminder & Alert Management POC
 
-## Getting Started
+Frontend-only proof of concept built with Next.js App Router, TypeScript, Tailwind CSS, MUI, Zustand, Axios, React Hook Form, and Zod.
 
-First, run the development server:
+## Features
+
+- Mock authentication with token + userId persistence
+- Protected routes with login redirection
+- Responsive dashboard with sidebar and top navbar
+- Event listing with search and date filter
+- Create event modal with React Hook Form + Zod validation
+- Dummy Google/Outlook calendar sync simulation
+- Reminder and alert simulation with browser notifications
+- Event details drawer
+- Settings page
+- Reusable, modular, scalable folder architecture
+
+## Tech Stack
+
+- Next.js 16 (App Router)
+- TypeScript (strict mode)
+- Tailwind CSS
+- MUI + Emotion
+- Zustand
+- Axios + axios-mock-adapter
+- React Hook Form + Zod
+- Day.js
+- Framer Motion
+- Sonner
+
+## Project Structure
+
+```text
+src/
+├── app/
+│   ├── (auth)/login/
+│   ├── (dashboard)/dashboard/
+│   ├── (dashboard)/settings/
+│   └── layout.tsx
+├── components/
+│   ├── common/
+│   ├── events/
+│   └── layout/
+├── modules/
+│   ├── auth/
+│   └── events/
+├── services/
+│   ├── api/
+│   └── calendar/
+├── hooks/
+├── store/
+├── types/
+├── utils/
+├── mock/
+├── providers/
+└── constants/
+```
+
+## Local Setup
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Create env file:
+
+```bash
+cp .env.example .env.local
+```
+
+3. Start development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. Open http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Demo Credentials
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Email: chauhansweeta24@gmail.com
+- Password: password123
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+- `npm run dev` - Run local dev server
+- `npm run build` - Production build
+- `npm run start` - Start production server
+- `npm run lint` - ESLint checks
+- `npm run typecheck` - TypeScript checks
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- No backend is required. APIs are mocked via Axios mock adapter.
+- Events are persisted in localStorage.
+- Reminder simulation runs on the client using interval polling.
