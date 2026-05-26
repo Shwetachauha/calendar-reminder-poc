@@ -47,8 +47,32 @@ export const syncGoogleCalendar = async (event: CalendarEvent, googleAccessToken
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Failed to create event in Google Calendar");
+    let message = "Failed to create event in Google Calendar";
+
+    try {
+      const body = (await response.json()) as { error?: { status?: string; message?: string } };
+      const status = body?.error?.status;
+
+      const isScopeError =
+        status === "PERMISSION_DENIED" ||
+        body?.error?.status === "PERMISSION_DENIED" ||
+        JSON.stringify(body).includes("ACCESS_TOKEN_SCOPE_INSUFFICIENT");
+
+      if (isScopeError || response.status === 403) {
+        message =
+          "Google Calendar access denied: the OAuth app is in Testing mode. " +
+          "To allow any Gmail account, publish the app: " +
+          "Google Cloud Console → APIs & Services → OAuth consent screen → PUBLISH APP.";
+      } else if (response.status === 401) {
+        message = "Google OAuth token expired. Go to Settings and reconnect Google.";
+      } else {
+        message = body?.error?.message ?? message;
+      }
+    } catch {
+      // response body was not JSON, use default message
+    }
+
+    throw new Error(message);
   }
 
   return response.json();
