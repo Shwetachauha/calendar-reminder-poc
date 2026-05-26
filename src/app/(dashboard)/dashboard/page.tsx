@@ -33,6 +33,10 @@ export default function DashboardPage() {
     google: providers.google.connected,
     outlook: providers.outlook.connected,
   };
+  const activeProvider = connectedProviders.google ? "google" : connectedProviders.outlook ? "outlook" : null;
+  const syncTargetLabel = connectedProviders.google
+    ? `Google Calendar (${providers.google.accountEmail ?? user?.email ?? "connected account"})`
+    : "Outlook Calendar";
 
   const hasConnectedProvider = connectedProviders.google || connectedProviders.outlook;
 
@@ -48,7 +52,7 @@ export default function DashboardPage() {
 
   const handleCreateEvent = useCallback(
     async (values: EventFormValues) => {
-      if (!user) {
+      if (!user || !activeProvider) {
         return;
       }
 
@@ -56,6 +60,7 @@ export default function DashboardPage() {
         await createEvent(
           {
             ...values,
+            provider: activeProvider,
             userId: user.id,
             date: dayjs(values.date).format("YYYY-MM-DD"),
           },
@@ -67,7 +72,7 @@ export default function DashboardPage() {
         toast.error(error instanceof Error ? error.message : "Failed to create event or sync provider");
       }
     },
-    [closeEventModal, createEvent, user],
+    [activeProvider, closeEventModal, createEvent, user],
   );
 
   const handleOpenEventModal = useCallback(() => {
@@ -114,7 +119,7 @@ export default function DashboardPage() {
           Calendar Events
         </Typography>
         <Typography variant="body2" className="!text-slate-600">
-          Create and manage alerts from Google and Outlook providers.
+          Create reminders that sync to the logged-in user&apos;s connected calendar.
         </Typography>
 
         <SearchBar
@@ -141,7 +146,7 @@ export default function DashboardPage() {
         loading={isLoading}
         onClose={closeEventModal}
         onSubmit={handleCreateEvent}
-        connectedProviders={connectedProviders}
+        syncTargetLabel={syncTargetLabel}
       />
 
       <EventDetailsDrawer open={isDrawerOpen} event={selectedEvent} onClose={closeDrawer} />

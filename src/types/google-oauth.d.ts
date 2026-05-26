@@ -8,9 +8,11 @@ declare global {
           initTokenClient: (config: {
             client_id: string;
             scope: string;
+            hint?: string;
             callback: (response: { access_token?: string; error?: string }) => void;
+            error_callback?: () => void;
           }) => {
-            requestAccessToken: (options?: { prompt?: string }) => void;
+            requestAccessToken: (options?: { prompt?: string; hint?: string }) => void;
           };
         };
       };

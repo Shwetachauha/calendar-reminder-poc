@@ -52,9 +52,14 @@ export const useEventStore = create<EventState>((set, get) => ({
       const created = await createEventApi(payload, token);
 
       if (created.provider === "google") {
-        const googleAccessToken = providers.google.accessToken;
-        if (!googleAccessToken) {
-          throw new Error("Google account is connected, but OAuth token is missing. Reconnect Google in Settings.");
+        const googleProvider = providers.google;
+        const googleAccessToken = googleProvider.accessToken;
+        const isSameUserGoogleToken = googleProvider.appUserId === payload.userId;
+
+        if (!googleAccessToken || !isSameUserGoogleToken) {
+          throw new Error(
+            "Google account is not connected for the logged-in user. Reconnect Google in Settings.",
+          );
         }
 
         await syncGoogleCalendar(created, googleAccessToken);

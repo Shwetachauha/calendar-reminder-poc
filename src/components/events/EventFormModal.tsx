@@ -28,10 +28,7 @@ interface EventFormModalProps {
   loading: boolean;
   onClose: () => void;
   onSubmit: (values: EventFormValues) => Promise<void>;
-  connectedProviders: {
-    google: boolean;
-    outlook: boolean;
-  };
+  syncTargetLabel: string;
 }
 
 const defaultValues: EventFormValues = {
@@ -41,10 +38,9 @@ const defaultValues: EventFormValues = {
   time: "09:00",
   reminderEnabled: true,
   reminderMinutes: 15,
-  provider: "google",
 };
 
-export const EventFormModal = ({ open, loading, onClose, onSubmit, connectedProviders }: EventFormModalProps) => {
+export const EventFormModal = ({ open, loading, onClose, onSubmit, syncTargetLabel }: EventFormModalProps) => {
   const {
     control,
     handleSubmit,
@@ -140,24 +136,7 @@ export const EventFormModal = ({ open, loading, onClose, onSubmit, connectedProv
               />
             </Stack>
 
-            <Controller
-              name="provider"
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} select fullWidth label="Calendar Provider">
-                  <MenuItem value="google" disabled={!connectedProviders.google}>
-                    Google {!connectedProviders.google ? "(connect in Settings)" : ""}
-                  </MenuItem>
-                  <MenuItem value="outlook" disabled={!connectedProviders.outlook}>
-                    Outlook {!connectedProviders.outlook ? "(connect in Settings)" : ""}
-                  </MenuItem>
-                </TextField>
-              )}
-            />
-
-            {!connectedProviders.google && !connectedProviders.outlook ? (
-              <Alert severity="warning">No provider connected. Open Settings and connect a dummy account first.</Alert>
-            ) : null}
+            <Alert severity="info">New events will sync automatically to {syncTargetLabel}.</Alert>
 
             <Controller
               name="reminderEnabled"

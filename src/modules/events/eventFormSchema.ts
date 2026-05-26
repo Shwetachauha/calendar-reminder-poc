@@ -7,7 +7,6 @@ export const eventFormSchema = z.object({
   time: z.string().min(1, "Time is required"),
   reminderEnabled: z.boolean(),
   reminderMinutes: z.number().min(5),
-  provider: z.enum(["google", "outlook"]),
 });
 
 export type EventFormValues = z.infer<typeof eventFormSchema>;

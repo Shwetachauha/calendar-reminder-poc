@@ -15,7 +15,12 @@ import LinkRoundedIcon from "@mui/icons-material/LinkRounded";
 import LinkOffRoundedIcon from "@mui/icons-material/LinkOffRounded";
 import SyncRoundedIcon from "@mui/icons-material/SyncRounded";
 import { toast } from "sonner";
-import { fetchGoogleUserProfile, loadGoogleIdentityScript } from "@/services/calendar/googleOAuthService";
+import {
+  fetchGoogleUserProfile,
+  loadGoogleIdentityScript,
+  requestGoogleAccessToken,
+} from "@/services/calendar/googleOAuthService";
+import { useAuthStore } from "@/store/authStore";
 import { useIntegrationStore } from "@/store/integrationStore";
 import { CalendarProvider } from "@/types/event";
 
@@ -33,6 +38,7 @@ const formatDateTime = (value: string | null) => {
 };
 
 export default function SettingsPage() {
+  const { user } = useAuthStore();
   const { providers, logs, connectProvider, connectProviderWithAccount, disconnectProvider } = useIntegrationStore();
   const [googleReady, setGoogleReady] = useState(false);
 
@@ -44,9 +50,14 @@ export default function SettingsPage() {
       });
   }, []);
 
-  const handleConnect = (provider: CalendarProvider) => {
+  const handleConnect = async (provider: CalendarProvider) => {
+    if (!user) {
+      toast.error("Login required before connecting a calendar");
+      return;
+    }
+
     if (provider !== "google") {
-      const accountId = connectProvider(provider);
+      const accountId = connectProvider(provider, { id: user.id, email: user.email });
       toast.success(`${providerLabels[provider]} connected (${accountId})`);
       return;
     }
@@ -62,32 +73,49 @@ export default function SettingsPage() {
       return;
     }
 
-    const tokenClient = window.google.accounts.oauth2.initTokenClient({
-      client_id: clientId,
-      scope: "openid email profile https://www.googleapis.com/auth/calendar.events",
-      callback: async (response) => {
-        if (response.error || !response.access_token) {
-          toast.error("Google OAuth was cancelled or failed");
-          return;
-        }
+    try {
+      // Step 1: silent attempt — if browser already has a matching Google session
+      let response = await requestGoogleAccessToken({
+        clientId,
+        email: user.email,
+        prompt: "none",
+      });
 
-        try {
-          const profile = await fetchGoogleUserProfile(response.access_token);
-          const accountId = profile.sub || `google_${Math.random().toString(36).slice(2, 8)}`;
-          connectProviderWithAccount("google", accountId, {
-            authMode: "oauth",
-            accountEmail: profile.email,
-            accessToken: response.access_token,
-            tokenPreview: `${response.access_token.slice(0, 8)}...`,
-          });
-          toast.success(`Google connected as ${profile.email ?? accountId}`);
-        } catch {
-          toast.error("Google token received, but profile fetch failed");
-        }
-      },
-    });
+      // Step 2: interactive fallback — opens Google sign-in / consent screen
+      if (response.error || !response.access_token) {
+        response = await requestGoogleAccessToken({
+          clientId,
+          email: user.email,
+          prompt: "select_account",
+        });
+      }
 
-    tokenClient.requestAccessToken({ prompt: "select_account" });
+      if (response.error || !response.access_token) {
+        toast.error("Google OAuth was cancelled or failed");
+        return;
+      }
+
+      const profile = await fetchGoogleUserProfile(response.access_token);
+      if (!profile.email || profile.email.toLowerCase() !== user.email.toLowerCase()) {
+        disconnectProvider("google");
+        toast.error("Please connect using the same Google account as your application login.");
+        return;
+      }
+
+      const accountId = profile.sub || `google_${user.id}`;
+      connectProviderWithAccount("google", accountId, {
+        appUserId: user.id,
+        appUserEmail: user.email,
+        authMode: "oauth",
+        accountEmail: profile.email,
+        accessToken: response.access_token,
+        tokenPreview: `${response.access_token.slice(0, 8)}...`,
+      });
+      toast.success(`Google connected as ${profile.email}`);
+    } catch {
+      disconnectProvider("google");
+      toast.error("Google OAuth was cancelled or failed");
+    }
   };
 
   const handleDisconnect = (provider: CalendarProvider) => {
@@ -120,6 +148,11 @@ export default function SettingsPage() {
       <Typography variant="body2" className="!mt-1 !text-slate-600">
         Google uses real OAuth account chooser and token pickup. Outlook remains simulated in this POC.
       </Typography>
+      {user ? (
+        <Typography variant="body2" className="!mt-1 !text-slate-600">
+          Google account must match application login: {user.email}
+        </Typography>
+      ) : null}
 
       <Stack spacing={2} className="!mt-4">
         {(Object.keys(providerLabels) as CalendarProvider[]).map((provider) => {

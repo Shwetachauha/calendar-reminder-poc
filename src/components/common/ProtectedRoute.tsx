@@ -1,6 +1,6 @@
 "use client";
 
-import { PropsWithChildren, useEffect } from "react";
+import { PropsWithChildren, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import CircularProgress from "@mui/material/CircularProgress";
 import Box from "@mui/material/Box";
@@ -10,9 +10,14 @@ export const ProtectedRoute = ({ children }: PropsWithChildren) => {
   const router = useRouter();
   const pathname = usePathname();
   const { user, isHydrated } = useAuthStore();
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    if (!isHydrated) {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isClient || !isHydrated) {
       return;
     }
 
@@ -23,7 +28,11 @@ export const ProtectedRoute = ({ children }: PropsWithChildren) => {
     if (user && pathname === "/login") {
       router.replace("/dashboard");
     }
-  }, [isHydrated, pathname, router, user]);
+  }, [isClient, isHydrated, pathname, router, user]);
+
+  if (!isClient) {
+    return null;
+  }
 
   if (!isHydrated || (!user && pathname !== "/login")) {
     return (

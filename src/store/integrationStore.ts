@@ -5,16 +5,18 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { STORAGE_KEYS } from "@/constants/storage";
 import { CalendarProvider } from "@/types/event";
-import { ProviderIntegration, ProviderSyncLog } from "@/types/integration";
+import { IntegrationAppUser, ProviderIntegration, ProviderSyncLog } from "@/types/integration";
 
 interface IntegrationState {
   providers: Record<CalendarProvider, ProviderIntegration>;
   logs: ProviderSyncLog[];
-  connectProvider: (provider: CalendarProvider) => string;
+  connectProvider: (provider: CalendarProvider, user?: IntegrationAppUser | null) => string;
   connectProviderWithAccount: (
     provider: CalendarProvider,
     accountId: string,
     options?: {
+      appUserId?: string;
+      appUserEmail?: string;
       accountEmail?: string;
       accessToken?: string;
       tokenPreview?: string;
@@ -23,6 +25,7 @@ interface IntegrationState {
   ) => void;
   disconnectProvider: (provider: CalendarProvider) => void;
   isProviderConnected: (provider: CalendarProvider) => boolean;
+  syncAuthSession: (user: IntegrationAppUser | null) => void;
   markSyncSuccess: (provider: CalendarProvider, eventId: string) => void;
   markSyncError: (provider: CalendarProvider, message: string, eventId?: string) => void;
 }
@@ -41,6 +44,8 @@ const defaultProviderState = (provider: CalendarProvider): ProviderIntegration =
   provider,
   connected: false,
   authMode: "dummy",
+  appUserId: null,
+  appUserEmail: null,
   accountId: null,
   accountEmail: null,
   accessToken: null,
@@ -56,23 +61,54 @@ const appendLog = (existing: ProviderSyncLog[], log: ProviderSyncLog) => {
   return [log, ...existing].slice(0, MAX_SYNC_LOGS);
 };
 
+const defaultProviders = (): Record<CalendarProvider, ProviderIntegration> => ({
+  google: defaultProviderState("google"),
+  outlook: defaultProviderState("outlook"),
+});
+
+const hasStaleSession = (
+  providers: Record<CalendarProvider, ProviderIntegration>,
+  user: IntegrationAppUser | null,
+) => {
+  return (Object.values(providers) as ProviderIntegration[]).some((provider) => {
+    if (!provider.connected) {
+      return false;
+    }
+
+    if (!user) {
+      return true;
+    }
+
+    if (!provider.appUserId || !provider.appUserEmail) {
+      return true;
+    }
+
+    return provider.appUserId !== user.id || provider.appUserEmail.toLowerCase() !== user.email.toLowerCase();
+  });
+};
+
 export const useIntegrationStore = create<IntegrationState>()(
   persist(
     (set, get) => ({
       providers: {
-        google: defaultProviderState("google"),
-        outlook: defaultProviderState("outlook"),
+        ...defaultProviders(),
       },
       logs: [],
-      connectProvider: (provider) => {
+      connectProvider: (provider, user) => {
         const accountId = `${provider}_acct_${Math.random().toString(36).slice(2, 8)}`;
-        get().connectProviderWithAccount(provider, accountId, { authMode: "dummy" });
+        get().connectProviderWithAccount(provider, accountId, {
+          authMode: "dummy",
+          appUserId: user?.id,
+          appUserEmail: user?.email,
+        });
 
         return accountId;
       },
       connectProviderWithAccount: (provider, accountId, options) => {
         const now = dayjs().toISOString();
         const authMode = options?.authMode ?? "oauth";
+        const appUserId = options?.appUserId ?? null;
+        const appUserEmail = options?.appUserEmail ?? null;
         const accountEmail = options?.accountEmail ?? null;
         const accessToken = options?.accessToken ?? null;
         const tokenPreview = options?.tokenPreview ?? null;
@@ -84,6 +120,8 @@ export const useIntegrationStore = create<IntegrationState>()(
               ...state.providers[provider],
               connected: true,
               authMode,
+              appUserId,
+              appUserEmail,
               accountId,
               accountEmail,
               accessToken,
@@ -99,7 +137,7 @@ export const useIntegrationStore = create<IntegrationState>()(
             status: "success",
             message:
               authMode === "oauth"
-                ? `OAuth connected: ${accountEmail ?? accountId}`
+                ? `OAuth connected for ${appUserEmail ?? accountEmail ?? accountId}`
                 : `Dummy account connected: ${accountId}`,
             timestamp: now,
           }),
@@ -123,6 +161,18 @@ export const useIntegrationStore = create<IntegrationState>()(
         }));
       },
       isProviderConnected: (provider) => get().providers[provider].connected,
+      syncAuthSession: (user) => {
+        set((state) => {
+          if (!hasStaleSession(state.providers, user)) {
+            return state;
+          }
+
+          return {
+            providers: defaultProviders(),
+            logs: [],
+          };
+        });
+      },
       markSyncSuccess: (provider, eventId) => {
         const now = dayjs().toISOString();
 

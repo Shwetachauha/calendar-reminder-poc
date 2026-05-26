@@ -6,6 +6,8 @@ export interface ProviderIntegration {
   provider: CalendarProvider;
   connected: boolean;
   authMode: "dummy" | "oauth";
+  appUserId: string | null;
+  appUserEmail: string | null;
   accountId: string | null;
   accountEmail: string | null;
   accessToken: string | null;
@@ -24,4 +26,9 @@ export interface ProviderSyncLog {
   message: string;
   eventId?: string;
   timestamp: string;
+}
+
+export interface IntegrationAppUser {
+  id: string;
+  email: string;
 }
